@@ -96,6 +96,19 @@ ul{list-style:none;margin:0;padding:0}
 .barra span{display:block;height:100%;border-radius:4px}
 .env-nota{margin:0;font-size:14px;color:var(--tinta-2)}
 
+/* cartões: quanto sobra em cada categoria */
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:4px 0 18px}
+.card{background:var(--sup);border:1px solid var(--linha);border-radius:16px;padding:12px 14px;min-width:0}
+.card:last-child:nth-child(odd){grid-column:1 / -1}
+.card-topo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--tinta-2);min-width:0}
+.card-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-valor{margin:6px 0 0;font-size:clamp(24px,7.5vw,32px);font-weight:800;font-variation-settings:"wdth" 75;letter-spacing:-.01em;font-variant-numeric:tabular-nums;line-height:1.05}
+.card-leg{margin:2px 0 10px;font-size:13px;color:var(--tinta-2)}
+.card .barra{margin:0}
+.card.passou .card-valor,.card.esgotado .card-valor{color:var(--alerta)}
+.card.passou .card-leg,.card.esgotado .card-leg{color:var(--alerta);font-weight:600}
+.card.quase .card-leg{color:var(--aviso);font-weight:600}
+
 /* histórico */
 .gasto{padding:12px 0;border-top:1px solid var(--linha)}
 .gasto:first-child{border-top:0}
@@ -436,6 +449,23 @@ function vEnvelopes(r){
     '</li>';
   }).join('') + '</ul>';
 }
+function vCards(r){
+  if(!r.cats.length) return '<p class="vazio">Nenhuma categoria cadastrada.</p>';
+  return '<div class="cards">' + r.cats.map(function(c){
+    var pct = c.limite > 0 ? Math.min(100, c.gasto/c.limite*100) : (c.gasto > 0 ? 100 : 0);
+    var estado = '', valor, leg;
+    if(c.limite === 0 && c.gasto === 0){ valor = '\u2014'; leg = 'sem limite definido'; }
+    else if(c.sobra < 0){ estado = 'passou'; valor = fmt(-c.sobra); leg = 'acima do limite de ' + fmt(c.limite); }
+    else if(c.sobra === 0){ estado = 'esgotado'; valor = fmt(0); leg = 'esgotado, limite de ' + fmt(c.limite); }
+    else { if(pct >= 85) estado = 'quase'; valor = fmt(c.sobra); leg = (estado === 'quase' ? 'perto do limite, de ' : 'sobra de ') + fmt(c.limite); }
+    return '<div class="card ' + estado + '">' +
+      '<div class="card-topo"><span class="pino" style="background:' + cor(c.cor) + '"></span><span class="card-nome">' + esc(c.nome) + '</span></div>' +
+      '<p class="card-valor">' + valor + '</p>' +
+      '<p class="card-leg">' + esc(leg) + '</p>' +
+      '<div class="barra"><span style="width:' + pct.toFixed(1) + '%;background:' + (estado === 'passou' || estado === 'esgotado' ? 'var(--alerta)' : cor(c.cor)) + '"></span></div>' +
+    '</div>';
+  }).join('') + '</div>';
+}
 function vHistorico(r, podeApagar, p){
   if(!r.gastos.length) return '<p class="vazio">Nenhum gasto lançado ainda.</p>';
   function catNome(id){ var c = p.categorias.filter(function(x){ return x.id === id; })[0]; return c ? c.nome : 'Categoria removida'; }
@@ -496,9 +526,9 @@ function vPessoa(p, o){
     ? (p.papel === 'admin' ? 'Defina seus limites em Ajustes.' : nomeAdmin() + ' ainda não liberou valores para você.')
     : 'Nenhum limite definido para ' + p.nome + '.';
   h += vHero(rot, r, vazio, segmentosCats(r));
+  h += '<h2 class="secao" style="margin-top:6px">Quanto sobra em cada categoria</h2>' + vCards(r);
   h += '<button class="primario largo" data-acao="lancar" data-id="' + esc(p.id) + '">' + (o.proprio ? 'Lançar gasto' : 'Lançar gasto de ' + esc(p.nome)) + '</button>';
   if(o.admin) h += '<button class="secundario largo" data-acao="editar-limites" data-id="' + esc(p.id) + '">' + (o.proprio ? 'Editar meus limites' : 'Editar limites de ' + esc(p.nome)) + '</button>';
-  h += '<h2 class="secao">Quanto sobra em cada categoria</h2>' + vEnvelopes(r);
   h += '<h2 class="secao">Gastos lançados</h2>' + vHistorico(r, !!o.admin, p);
   return h;
 }
