@@ -139,6 +139,7 @@ ul{list-style:none;margin:0;padding:0}
 .perfil-txt{display:flex;flex-direction:column}
 .perfil-txt b{font-size:19px}
 .perfil-txt small{color:var(--tinta-2);font-size:14px}
+.pin{width:100%;font-size:32px;letter-spacing:.5em;text-align:center;padding:12px;border:1.5px solid var(--linha);border-radius:12px;background:var(--papel)}
 
 /* folha (bottom sheet) */
 .veu{position:fixed;inset:0;background:var(--veu);z-index:40}
@@ -242,6 +243,9 @@ var sb = null;
 if(CONFIGURADO && window.supabase && typeof window.supabase.createClient === 'function'){
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
+
+/* PIN do perfil de administrador. Aqui fica só o hash (SHA-256), nunca o número. */
+var ADMIN_PIN_HASH = 'b382e1924a4d72a57ef3635d17f4c42a5ac18ee1ddff0eef0648b05f67a6dc14';
 
 var CORES = {
   roxo:['Roxo','#7457A0'], vermelho:['Vermelho','#C2412D'], amarelo:['Amarelo','#C9961A'],
@@ -730,7 +734,41 @@ function salvarGasto(){
 }
 
 /* ---------- escolha de pessoa ---------- */
+function sha256(txt){
+  var enc = new TextEncoder().encode(txt);
+  return crypto.subtle.digest('SHA-256', enc).then(function(buf){
+    return Array.prototype.map.call(new Uint8Array(buf), function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  });
+}
+function abrirPin(p){
+  S.folha = {tipo:'pin', pessoaId:p.id};
+  $('#folha-root').innerHTML =
+    '<div class="veu" data-acao="fechar"></div>' +
+    '<div class="folha" role="dialog" aria-modal="true" aria-labelledby="t-pin">' +
+      '<div class="folha-topo"><h2 id="t-pin">PIN de ' + esc(p.nome) + '</h2><button class="fechar" data-acao="fechar" aria-label="Fechar">×</button></div>' +
+      '<input id="pin" class="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="PIN de 4 dígitos">' +
+      '<p class="check" id="pin-msg" aria-live="polite"></p>' +
+      '<button class="primario largo" data-acao="pin-ok">Entrar</button>' +
+    '</div>';
+  document.body.classList.add('travado');
+  setTimeout(function(){ var v = $('#pin'); if(v) v.focus(); }, 60);
+}
+function conferirPin(){
+  var f = S.folha; if(!f || f.tipo !== 'pin') return;
+  var inp = $('#pin'), msg = $('#pin-msg');
+  if(!inp || inp.value.length !== 4){ if(msg){ msg.textContent = 'Digite os 4 dígitos.'; msg.className = 'check erro'; } return; }
+  if(!window.crypto || !crypto.subtle){ msg.textContent = 'Este navegador não consegue verificar o PIN. Abra o app pelo endereço https.'; msg.className = 'check erro'; return; }
+  sha256('cg-pin:' + inp.value).then(function(h){
+    if(h === ADMIN_PIN_HASH){ fecharFolha(); iniciarSessao(f.pessoaId); }
+    else { msg.textContent = 'PIN incorreto.'; msg.className = 'check erro'; inp.value = ''; inp.focus(); }
+  });
+}
 function entrar(id){
+  var p = pessoa(id); if(!p) return;
+  if(p.papel === 'admin' && ADMIN_PIN_HASH){ abrirPin(p); return; }
+  iniciarSessao(id);
+}
+function iniciarSessao(id){
   if(!pessoa(id)) return;
   S.sessao = id; guardarSessao(id);
   S.aba = 'familia'; S.pessoaAberta = null; S.ajPessoa = null; S.rascunho = null; S.histLimite = 15;
@@ -844,6 +882,7 @@ document.addEventListener('click', function(e){
     case 'entrar': entrar(id); break;
     case 'trocar': trocarPessoa(); break;
     case 'add-pessoa': addPessoa(); break;
+    case 'pin-ok': conferirPin(); break;
     case 'recarregar': S.erroCarga = ''; S.carregado = false; render(); carregar(); break;
     case 'recarregar-pagina': location.reload(); break;
     case 'aba': S.aba = b.dataset.aba; S.pessoaAberta = null; S.histLimite = 15; render(); window.scrollTo(0,0); break;
@@ -866,6 +905,11 @@ document.addEventListener('click', function(e){
 });
 document.addEventListener('input', function(e){
   var t = e.target;
+  if(t.id === 'pin'){
+    t.value = t.value.replace(/\D/g,'').slice(0,4);
+    if(t.value.length === 4) conferirPin();
+    return;
+  }
   if(t.matches('[data-rasc]') && S.rascunho){
     var k = t.dataset.rasc, d = S.rascunho;
     if(k === 'nome') d.nome = t.value;
@@ -884,7 +928,8 @@ document.addEventListener('keydown', function(e){
   if(e.key === 'Escape' && S.folha){ fecharFolha(); return; }
   if(e.key !== 'Enter') return;
   var id = e.target && e.target.id;
-  if(id === 'nova-cat'){ e.preventDefault(); addCat(); }
+  if(id === 'pin'){ e.preventDefault(); conferirPin(); }
+  else if(id === 'nova-cat'){ e.preventDefault(); addCat(); }
   else if(id === 'novo-cartao'){ e.preventDefault(); addCartao(); }
   else if(id === 'nova-pessoa'){ e.preventDefault(); addPessoa(); }
 });

@@ -50,9 +50,11 @@ Na primeira vez, cada pessoa escolhe o próprio nome. O aparelho lembra, e nas p
 - Só o perfil do Felipe apaga gastos lançados.
 - O botão com o nome no topo (**Trocar**) volta para a tela de escolha.
 
-## Sobre a segurança sem senha
+## Sobre o PIN do Felipe
 
-Sem senha, o app não tem como impedir que alguém escolha o nome "Felipe" e mexa nos limites. Para uso em família isso costuma bastar, mas se um dia quiser travar o perfil do Felipe, dá para acrescentar um PIN de 4 dígitos só nele. Além disso, a chave anon fica visível no código da página pública: qualquer pessoa que tenha o endereço consegue abrir o app. Não publique o link fora da família.
+O perfil do Felipe pede um PIN de 4 dígitos na hora de escolher o nome. Isabela e Agatha entram direto nos próprios nomes, sem PIN. O PIN fica no código só como hash (SHA-256), nunca em texto. Para trocar o PIN, é preciso gerar um hash novo e trocar a linha `ADMIN_PIN_HASH` no `index.html`: peça ao Claude.
+
+É uma trava leve para a família, não segurança de banco: a chave anon fica visível no código da página pública, então não publique o endereço fora da família.
 
 ## Se algo der errado
 
