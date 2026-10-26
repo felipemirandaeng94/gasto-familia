@@ -84,11 +84,11 @@ ul{list-style:none;margin:0;padding:0}
 .envelopes{background:var(--sup);border:1px solid var(--linha);border-radius:16px;padding:2px 16px}
 .env{padding:14px 0;border-top:1px solid var(--linha)}
 .env:first-child{border-top:0}
-.env-linha{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.env-linha{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .env-nome{display:flex;align-items:center;gap:8px;font-weight:600;font-size:17px;min-width:0}
 .pino{width:10px;height:10px;border-radius:3px;flex:none}
-.env-sobra{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.env-sobra small{font-weight:500;color:var(--tinta-2);font-size:13px}
+.env-sobra{display:flex;flex-direction:column;align-items:flex-end;line-height:1.1;font-weight:800;font-size:22px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.env-sobra small{font-weight:600;color:var(--tinta-2);font-size:12.5px;margin-top:2px}
 .env-sobra.sem{font-weight:500;color:var(--tinta-2);font-size:14px}
 .env.passou .env-sobra,.env.esgotado .env-sobra{color:var(--alerta)}
 .env.quase .env-nota{color:var(--aviso)}
@@ -424,9 +424,9 @@ function vEnvelopes(r){
     var pct = c.limite > 0 ? Math.min(100, c.gasto/c.limite*100) : (c.gasto > 0 ? 100 : 0);
     var estado = '', dir, nota = '';
     if(c.limite === 0 && c.gasto === 0){ dir = '<span class="env-sobra sem">Sem limite definido</span>'; }
-    else if(c.sobra < 0){ estado = 'passou'; dir = '<span class="env-sobra">Passou ' + fmt(-c.sobra) + '</span>'; }
-    else if(c.sobra === 0){ estado = 'esgotado'; dir = '<span class="env-sobra">Esgotado</span>'; }
-    else { if(pct >= 85) estado = 'quase'; dir = '<span class="env-sobra"><small>sobra </small>' + fmt(c.sobra) + '</span>'; }
+    else if(c.sobra < 0){ estado = 'passou'; dir = '<span class="env-sobra">' + fmt(-c.sobra) + '<small>acima do limite</small></span>'; }
+    else if(c.sobra === 0){ estado = 'esgotado'; dir = '<span class="env-sobra">' + fmt(0) + '<small>esgotado</small></span>'; }
+    else { if(pct >= 85) estado = 'quase'; dir = '<span class="env-sobra">' + fmt(c.sobra) + '<small>sobra</small></span>'; }
     if(c.limite > 0) nota = 'Gastou ' + fmt(c.gasto) + ' de ' + fmt(c.limite) + (estado === 'quase' ? '. Perto do limite.' : '');
     else if(c.gasto > 0) nota = 'Gastou ' + fmt(c.gasto);
     return '<li class="env ' + estado + '">' +
@@ -498,7 +498,7 @@ function vPessoa(p, o){
   h += vHero(rot, r, vazio, segmentosCats(r));
   h += '<button class="primario largo" data-acao="lancar" data-id="' + esc(p.id) + '">' + (o.proprio ? 'Lançar gasto' : 'Lançar gasto de ' + esc(p.nome)) + '</button>';
   if(o.admin) h += '<button class="secundario largo" data-acao="editar-limites" data-id="' + esc(p.id) + '">' + (o.proprio ? 'Editar meus limites' : 'Editar limites de ' + esc(p.nome)) + '</button>';
-  h += '<h2 class="secao">Por categoria</h2>' + vEnvelopes(r);
+  h += '<h2 class="secao">Quanto sobra em cada categoria</h2>' + vEnvelopes(r);
   h += '<h2 class="secao">Gastos lançados</h2>' + vHistorico(r, !!o.admin, p);
   return h;
 }
